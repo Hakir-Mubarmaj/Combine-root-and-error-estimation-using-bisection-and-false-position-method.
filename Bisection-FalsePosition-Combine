@@ -1,0 +1,158 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import cv2
+import io
+
+
+# Define the function
+def func(x):
+    return x ** 3 - 2 * x - 5
+
+
+# Implementing Bisection Method
+def bisection(a, b, true_root):
+    if func(a) * func(b) >= 0:
+        print("Incorrect a and b")
+        return
+
+    c = a
+    root_values = []
+    error_values = []
+    for i in range(20):
+
+        # Find middle point
+        c = (a + b) / 2
+
+        # Check if middle point is root
+        if func(c) == 0.0:
+            break
+
+        # Decide the side to repeat the steps
+        if func(c) * func(a) < 0:
+            b = c
+        else:
+            a = c
+
+        root_values.append(c)
+
+        # Calculate the relative error if true_root is not None
+        if true_root is not None:
+            relative_error = abs((true_root - c) / true_root) * 100
+            error_values.append(relative_error)
+
+    return root_values, error_values
+
+
+# Implementing False Position Method
+def false_position(a, b, true_root):
+    if func(a) * func(b) >= 0:
+        print("Incorrect a and b")
+        return
+
+    root_values = []
+    error_values = []
+    for i in range(20):
+
+        # Find the point that intersects x-axis
+        c = (a * func(b) - b * func(a)) / (func(b) - func(a))
+
+        # Check if c is root
+        if func(c) == 0.0:
+            break
+
+        # Decide the side to repeat the steps
+        elif func(c) * func(a) < 0:
+            b = c
+        else:
+            a = c
+
+        root_values.append(c)
+
+        # Calculate the relative error if true_root is not None
+        if true_root is not None:
+            relative_error = abs((true_root - c) / true_root) * 100
+            error_values.append(relative_error)
+
+    return root_values, error_values
+
+
+a = 3
+b = 2
+
+# First run of Bisection Method to get true_root
+root_values_bisect, _ = bisection(a, b, None)
+true_root_bisect = root_values_bisect[-1]
+
+# Second run of Bisection Method to get error values
+root_values_bisect, error_values_bisect = bisection(a, b, true_root_bisect)
+
+# First run of False Position Method to get true_root
+root_values_false_pos, _ = false_position(a, b, None)
+true_root_false_pos = root_values_false_pos[-1]
+
+# Second run of False Position Method to get error values
+root_values_false_pos, error_values_false_pos = false_position(a, b, true_root_false_pos)
+
+
+# Create frames for each iteration of Bisection Method and False Position Method respectively.
+frames = []
+for i, (root_bisect, error_bisect, root_false_pos, error_false_pos) in enumerate(zip(root_values_bisect,
+                                                                                       error_values_bisect,
+                                                                                       root_values_false_pos,
+                                                                                       error_values_false_pos)):
+    fig, ((ax1_1, ax1_2), (ax2_1, ax2_2)) = plt.subplots(2, 2)
+
+    ax1_1.plot(root_values_bisect[:i + 1])
+    ax1_1.set_title(f'Bisect Iteration {i + 1}')
+    ax1_1.set_xlabel('Iteration')
+    ax1_1.set_ylabel('Root Value')
+    ax1_1.grid(True)
+
+    ax1_2.plot(error_values_bisect[:i + 1])
+    ax1_2.set_title(f'Iteration {i + 1}')
+    ax1_2.set_xlabel('Iteration')
+    ax1_2.set_ylabel('Error (%)')
+    ax1_2.grid(True)
+
+    ax2_1.plot(root_values_false_pos[:i + 1])
+    ax2_1.set_title(f'False Iteration {i + 1}')
+    ax2_1.set_xlabel('Iteration')
+    ax2_1.set_ylabel('Root Value')
+    ax2_1.grid(True)
+
+    ax2_2.plot(error_values_false_pos[:i + 1])
+    ax2_2.set_title(f'Iteration {i + 1}')
+    ax2_2.set_xlabel('Iteration')
+    ax2_2.set_ylabel('Error (%)')
+    ax2_2.grid(True)
+
+   # Save it to a temporary buffer.
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+
+   # Close the current figure
+    plt.close(fig)
+
+   # Load buffer as an image
+    img_arr = np.frombuffer(buf.getvalue(), dtype=np.uint8)
+    buf.close()
+
+    img = cv2.imdecode(img_arr, 1)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+   # Append the image to the frames list
+    frames.append(img)
+
+# Save frames as a video file
+height, width, _ = frames[0].shape
+size = (width, height)
+out = cv2.VideoWriter('root_value_estimation.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 1, size)
+
+for i in range(len(frames)):
+    out.write(frames[i])
+out.release()
+print(root_values_bisect)
+print(error_values_bisect)
+print(root_values_false_pos)
+print(error_values_false_pos)
